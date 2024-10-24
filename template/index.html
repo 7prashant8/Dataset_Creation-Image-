@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Generator</title>
+</head>
+<body>
+    <h1>Generate Similar Images</h1>
+    <form method="POST">
+        <label for="num_images">How many similar images would you like to generate?</label>
+        <input type="number" id="num_images" name="num_images" min="1" required>
+        <button type="submit">Generate</button>
+    </form>
+
+    <h2>Generated Images</h2>
+    <div>
+        {% for img in generated_images %}
+            <img src="{{ url_for('static', filename='generated/' + img) }}" alt="Generated Image" style="width: 200px;"/>
+        {% endfor %}
+    </div>
+</body>
+</html>
