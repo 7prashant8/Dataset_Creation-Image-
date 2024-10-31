@@ -1,33 +1,50 @@
 import streamlit as st
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 import numpy as np
+import os
 import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model, Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 
-# Load your trained model (update with the correct path or method)
-model = load_model('my_model.h5')  # or use 'my_model_directory' for TensorFlow format
+# Load pre-trained model or load a saved model
+@st.cache_resource
+def create_model():
+    # Initialize the MobileNetV2 model
+    base_model = MobileNetV2(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(2, activation='softmax')(x)
+    model = Model(inputs=base_model.input, outputs=x)
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
 
-# Set up Streamlit
-st.title("Disease Image Generator")
-st.write("Upload an image of the disease:")
+model = create_model()  # Initialize model
 
-# Upload image
-uploaded_file = st.file_uploader("Choose an image...", type="jpg")
+# Streamlit web app
+st.title("Data Doppler - Disease Image Generator")
+st.write("Upload an image of a disease to generate similar images.")
 
+# File uploader for the user's input image
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+# If an image is uploaded
 if uploaded_file is not None:
-    # Load the image
-    img = load_img(uploaded_file, target_size=(224, 224))
-    img_array = img_to_array(img) / 255.0
+    img = load_img(uploaded_file, target_size=(224, 224))  # Resize image to fit model input size
+    img_array = img_to_array(img) / 255.0  # Normalize image array
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-    # Generate predictions
+    # Show original uploaded image
+    st.image(img, caption="Uploaded Image", use_column_width=True)
+
+    # Predict disease class
     predictions = model.predict(img_array)
-    st.write("Predictions:", predictions)
+    st.write("Model Predictions:", predictions)
 
-    # Ask for number of similar images to generate
-    num_images = st.number_input("How many similar images would you like to generate?", min_value=1, max_value=100, value=1)
+    # Generate similar images using data augmentation
+    num_images = st.number_input("How many similar images would you like to generate?", min_value=1, max_value=10, value=3)
 
-    # Data augmentation
+    # Set up data augmentation for generating similar images
     data_gen = ImageDataGenerator(
         rotation_range=40,
         width_shift_range=0.2,
@@ -38,12 +55,15 @@ if uploaded_file is not None:
         fill_mode='nearest'
     )
 
-    # Generate and display images
-    for i in range(num_images):
-        img_iterator = data_gen.flow(img_array)
-        augmented_img = next(img_iterator)[0].astype(np.float32)  # Get the augmented image
-        plt.subplot(1, num_images, i + 1)
-        plt.imshow(augmented_img)
-        plt.axis('off')
+    # Display the generated images
+    st.write("Generated Similar Images:")
+    fig, axs = plt.subplots(1, num_images, figsize=(15, 15))
+    img_iterator = data_gen.flow(img_array)
 
-    st.pyplot(plt)
+    for i in range(num_images):
+        generated_img = next(img_iterator)[0]
+        axs[i].imshow(generated_img)
+        axs[i].axis('off')
+    st.pyplot(fig)
+
+st.write("**Note:** This tool is for illustrative purposes and may not accurately represent disease images.")
