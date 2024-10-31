@@ -7,3 +7,8 @@ scikit-learn
 Pillow  # For image processing if your app uses images
 opencv-python-headless  # For image processing without GUI, useful on Streamlit Cloud
 requests  # For making HTTP requests if needed
+streamlit
+tensorflow
+numpy
+matplotlib
+pillow  # For image handling
